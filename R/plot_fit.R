@@ -43,7 +43,8 @@ plot.incidence2_fit <- function(x, ...) {
 
   graph +
     ggplot2::geom_point(
-      mapping = ggplot2::aes(x = !!sym(date_var) + shift, y = .data$fit)) +
+      mapping = ggplot2::aes(x = !!sym(date_var) + shift, y = .data$fit),
+      size = 0.5) +
     ggplot2::geom_ribbon(ggplot2::aes(x = !!sym(date_var) + shift,
                                       ymin = .data$lower,
                                       ymax = .data$upper),

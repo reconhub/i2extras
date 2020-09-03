@@ -43,7 +43,8 @@ plot.incidence2_rolling <- function(x, ...) {
   graph +
     ggplot2::geom_point(mapping = ggplot2::aes(x = !!sym(date_var) + shift,
                                                y = !!sym(ra)),
-                        position = ggplot2::position_stack()) +
+                        position = ggplot2::position_stack(),
+                        size = 0.5) +
     ggplot2::geom_line(mapping = ggplot2::aes(x = !!sym(date_var) + shift,
                                               y = !!sym(ra)),
                        position = ggplot2::position_stack())

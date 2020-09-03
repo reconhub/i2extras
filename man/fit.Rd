@@ -17,7 +17,8 @@ fit(dat, model, ...)
 
 \item{model}{The regression model to fit (can be "negbin" or "poisson").}
 
-\item{...}{Not currently used.}
+\item{...}{Additional arguments to pass to \code{\link[stats:glm]{stats::glm()}} for
+\code{model = "poisson"} or \code{\link[MASS:glm.nb]{MASS::glm.nb()}} for \code{model = "negbin"}.}
 
 \item{alpha}{Value of alpha used to calculate confidence intervals; defaults
 to 0.05 which corresponds to a 95\% confidence interval.}

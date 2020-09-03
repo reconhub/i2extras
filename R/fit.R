@@ -50,7 +50,12 @@ fit.incidence2 <- function(dat, model = c("negbin", "poisson"), alpha = 0.05, ..
         )),
       fitted = list(
         fitted_values(.data$data, model, alpha)
-      ))
+      ),
+      r = model$coefficients[2],
+      `r-lower` = suppressMessages(stats::confint(model, 2)[1]),
+      `r-upper` = suppressMessages(stats::confint(model, 2)[2])
+    )
+
     out$data <- NULL
   } else {
     out <- dat
@@ -60,6 +65,7 @@ fit.incidence2 <- function(dat, model = c("negbin", "poisson"), alpha = 0.05, ..
       poisson = stats::glm(fmla, data = dat, family = stats::poisson),
       stop('Invalid model. Please use one of "negbin" or "poisson".')))
     out <- fitted_values(out, out$model[[1]], alpha)
+    out <- dplyr::nest_by(out, .data$model, .key = "fitted")
   }
 
   # create subclass of tibble
@@ -69,9 +75,8 @@ fit.incidence2 <- function(dat, model = c("negbin", "poisson"), alpha = 0.05, ..
                             count = count,
                             interval = incidence2::get_interval(dat),
                             cumulative = attr(dat, "cumulative"),
-                            fit = "fit",
-                            lower = "lower",
-                            upper = "upper",
+                            model = "model",
+                            fitted = "fitted",
                             nrow = nrow(out),
                             class = "incidence2_fit")
 
@@ -86,5 +91,13 @@ fitted_values <- function(x, fit, alpha) {
   x$fit <- inverse_link(pred$fit)
   x$lower <- inverse_link(pred$fit + stats::qnorm(alpha/2) * pred$se.fit)
   x$upper <- inverse_link(pred$fit + stats::qnorm(1 - alpha/2) * pred$se.fit)
+  x
+}
+
+#' @export
+add_doubling <- function(x) {
+  x$doubling <- log(2) / x$r
+  x$`doubling-lower` <- log(2) / x$`r-lower`
+  x$`doubling-upper` <- log(2) / x$`r-upper`
   x
 }
