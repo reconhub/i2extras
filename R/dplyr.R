@@ -59,6 +59,14 @@ incidence2_fit_can_reconstruct <- function(x, to) {
     }
   }
 
+  ## check error_vars are present
+  error_vars <- attr(to, "error_vars")
+  if (!is.null(error_vars)) {
+    if (!(all(error_vars %in% x_names))) {
+      return(FALSE)
+    }
+  }
+
   ## check model is present
   model <- attr(to, "model")
   if (!(model %in% x_names)) {
@@ -135,6 +143,14 @@ incidence2_fit_reconstruct <- function(x, to) {
     group_index <- which(current_names %in% group_vars)
     attr(x, "groups") <- value[group_index]
   }
+
+  error_vars <- attr(x, "error_vars")
+  if (!is.null(error_vars)) {
+    error_index <- which(current_names %in% error_vars)
+    attr(x, "error_vars") <- value[error_index]
+  }
+
+
 
   out <- NextMethod()
   incidence2_fit_reconstruct(out, x)

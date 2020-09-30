@@ -24,7 +24,8 @@ Imports:
     ellipsis,
     MASS,
     tidyr,
-    vctrs
+    vctrs,
+    trending
 Suggests: 
     testthat,
     outbreaks,
