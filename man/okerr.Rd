@@ -23,11 +23,20 @@ err(x, ...)
 \method{err}{incidence2_fit}(x, ...)
 }
 \arguments{
-\item{x}{The output of functions \code{lm_model}, \code{glm_model}, \code{glm_nb_model}, or
-brms_model or a list of these objects.}
+\item{x}{The output of function \code{\link[=fit_curve.incidence2]{fit_curve.incidence2()}}.}
 
-\item{...}{Additional arguments passed to underlying models.}
+\item{...}{Not currently used.}
 }
 \description{
-Error handling for incidence2_fit objects
+These functions are used to filter succesful model fits from those that
+errored.
+}
+\details{
+The following accessors are available:
+\itemize{
+\item \code{ok()}: returns rows from an \code{\link{incidence2_fit}} object that did not error
+during the model fitting stages.
+\item \code{err()}: returns rows from an \code{\link{incidence2_fit}} object that errored
+during the model fitting stages.
+}
 }

@@ -36,7 +36,7 @@ ok.default <- function(x, ...) {
 
 
 #' @rdname okerr
-#' @aliases ok.default
+#' @aliases ok.incidence2_fit
 #' @export
 ok.incidence2_fit <- function(x, ...) {
   error_vars <- attr(x, "error_vars")
