@@ -30,7 +30,6 @@ fit_curve.incidence2 <- function(dat,
                                  model = c("negbin", "poisson"),
                                  alpha = 0.05,
                                  ...) {
-  ellipsis::check_dots_empty()
   model <- match.arg(model)
   groups <- incidence2::get_group_names(dat)
   dates <- incidence2::get_dates_name(dat)
@@ -38,45 +37,49 @@ fit_curve.incidence2 <- function(dat,
   fmla <- stats::as.formula(paste(count, "~", dates))
   trending_model <- switch(
     model,
-    negbin = trending::glm_nb_model(fmla),
-    poisson = trending::glm_model(fmla, family = poisson),
+    negbin = trending::glm_nb_model(fmla, ...),
+    poisson = trending::glm_model(fmla, family = "poisson", ...),
     stop('Invalid model. Please use one of "negbin" or "poisson".')
   )
 
   if (!is.null(groups)) {
     out <- dplyr::nest_by(grouped_df(dat, groups))
-    fiterr <- purrr::map(
+    fiterr <- lapply(
       out$data,
-      function(x) purrr::safely(trending::fit)(trending_model, x)
+      function(x) safely(trending::fit)(trending_model, x)
     )
-    fiterr <- purrr::transpose(fiterr)
-    prederr <- purrr::map(
-      fiterr$result,
-      function(x) purrr::safely(predict)(x, interval = "ci")
+    fiterr <- base_transpose(fiterr)
+    prederr <- lapply(
+      fiterr[[1]],
+      function(x) safely(predict)(x, interval = "ci")
     )
-    prederr <- purrr::transpose(prederr)
-    model <- purrr::map(
-      fiterr$result,
-      function(x) purrr::safely(trending::get_model)(x)
+    prederr <- base_transpose(prederr)
+    model <- lapply(
+      fiterr[[1]],
+      function(x) safely(trending::get_model)(x)
     )
-    model <- purrr::transpose(model)
-    out$model <- model$result
-    out$fitted_values <-prederr$result 
-    out$fitted_error <- fiterr$error
-    out$predicted_error <-prederr$error
+    model <- base_transpose(model)
+    out$model <- model[[1]]
+    out$estimates <-prederr[[1]] 
+    out$fitting_warning <- fiterr[[2]]
+    out$fitting_error <- fiterr[[3]]
+    out$prediction_warning <-prederr[[3]]
+    out$prediction_error <-prederr[[3]]
     out$data <- NULL
-    error_vars <- c("fitted_error", "predicted_error")
-
+    warning_vars <- c("fitting_warning", "prediction_warning")
+    error_vars <- c("fitting_error", "prediction_error")
 
   } else {
     fitted_model <- trending::fit(trending_model, data = dat)
     model <- trending::get_model(fitted_model)
-    fitted_values <- predict(fitted_model, interval = "ci")
+    estimates <- predict(fitted_model, interval = "ci")
     out <- tibble(
       model = list(model),
-      fitted_values = list(fitted_values)
+      estimates = list(fitted_values)
     )
+    warning_vars <- NULL
     error_vars <- NULL
+
   }
 
   # create subclass of tibble
@@ -87,7 +90,8 @@ fit_curve.incidence2 <- function(dat,
                             interval = incidence2::get_interval(dat),
                             cumulative = attr(dat, "cumulative"),
                             model = "model",
-                            fitted = "fitted_values",
+                            fitted = "estimates",
+                            warning_vars = warning_vars,
                             error_vars = error_vars,
                             nrow = nrow(out),
                             class = "incidence2_fit")

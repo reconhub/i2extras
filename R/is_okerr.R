@@ -15,34 +15,37 @@
 #' * `err()`: returns rows from an [`incidence2_fit`] object that errored
 #'   during the model fitting stages.
 #'
-#' @name okerr
+#' @name is_okerr
 NULL
 
-#' @rdname okerr
-#' @aliases ok
+#' @rdname is_okerr
+#' @aliases is_ok
 #' @export
-ok <- function(x, ...) {
-  UseMethod("ok")
+is_ok <- function(x, ...) {
+  UseMethod("is_ok")
 }
 
 
-#' @rdname okerr
-#' @aliases ok.incidence2_fit
+#' @rdname is_okerr
+#' @aliases is_ok.incidence2_fit
 #' @export
-ok.default <- function(x, ...) {
+is_ok.default <- function(x, ...) {
   stop(sprintf("Not implemented for class %s",
                paste(class(x), collapse = ", ")))
 }
 
 
-#' @rdname okerr
-#' @aliases ok.incidence2_fit
+#' @rdname is_okerr
+#' @aliases is_ok.incidence2_fit
 #' @export
-ok.incidence2_fit <- function(x, ...) {
+is_ok.incidence2_fit <- function(x, ...) {
   error_vars <- attr(x, "error_vars")
   if (!is.null(error_vars)) {
       ok <- suppressMessages(
-          purrr::map(x[error_vars], function(z) purrr::map_lgl(z, is.null))
+          lapply(
+            x[error_vars],
+            function(z) vapply(z, is.null, logical(1))
+          )
       )
       
       ok <- do.call(`|`, ok)
@@ -52,31 +55,34 @@ ok.incidence2_fit <- function(x, ...) {
 }
 
 
-#' @rdname okerr
-#' @aliases err
+#' @rdname is_okerr
+#' @aliases is_err
 #' @export
-err <- function(x, ...) {
-  UseMethod("err")
+is_err <- function(x, ...) {
+  UseMethod("is_err")
 }
 
 
-#' @rdname okerr
-#' @aliases err.default
+#' @rdname is_okerr
+#' @aliases is_err.default
 #' @export
-err.default <- function(x, ...) {
+is_err.default <- function(x, ...) {
   stop(sprintf("Not implemented for class %s",
                paste(class(x), collapse = ", ")))
 }
 
 
-#' @rdname okerr
-#' @aliases err.incidence2_fit
+#' @rdname is_okerr
+#' @aliases is_err.incidence2_fit
 #' @export
-err.incidence2_fit <- function(x, ...) {
+is_err.incidence2_fit <- function(x, ...) {
   error_vars <- attr(x, "error_vars")
   if (!is.null(error_vars)) {
       ok <- suppressMessages(
-          purrr::map(x[error_vars], function(z) purrr::map_lgl(z, is.null))
+          lapply(
+            x[error_vars],
+            function(z) vapply(z, is.null, logical(1))
+          )
       )
       ok <- do.call(`|`, ok)
       x <- x[!ok, ]
