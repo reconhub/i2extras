@@ -32,7 +32,8 @@ Imports:
     tidyr,
     vctrs,
     ellipsis,
-    ggplot2
+    ggplot2,
+    data.table
 Suggests: 
     testthat,
     outbreaks,

@@ -21,7 +21,7 @@ A tibble with the the following columns:
 \itemize{
 \item \code{observed_date}: the date of peak incidence of the original dataset.
 \item \code{observed_count}: the peak incidence of the original dataset.
-\item \code{estimated}: the mean peak time of the bootstrap datasets.
+\item \code{estimated}: the median peak time of the bootstrap datasets.
 \item \code{lower_ci/upper_ci}: the confidence interval based on bootstrap datasets.
 \item \code{peaks}: a nested tibble containing the the peak times of the bootstrapped
 datasets.
@@ -29,8 +29,8 @@ datasets.
 }
 \description{
 This function can be used to estimate the peak of an epidemic curve stored as
-\link[incidence2:incidence]{incidence2::incidence} object, using bootstrap. See \code{\link[=bootstrap]{bootstrap()}} for more
-information on the resampling.
+\link[incidence2:incidence]{incidence2::incidence} object, using bootstrapped samples of the available
+data. See \code{\link[=bootstrap]{bootstrap()}} for more information on the resampling.
 }
 \details{
 Input dates are resampled with replacement to form bootstrapped
@@ -49,32 +49,24 @@ equally likely to be reported
 }
 }
 \examples{
-if (requireNamespace("outbreaks", quietly = TRUE) &&
-    requireNamespace("incidence2", quietly = TRUE)) {
-  withAutoprint( {
-    # load data and create incidence
-    data(fluH7N9_china_2013, package = "outbreaks")
-    i <- incidence2::incidence(fluH7N9_china_2013, date_index = date_of_onset)
-    i
+if (requireNamespace("outbreaks", quietly = TRUE)) {
 
-    # one simple bootstrap
-    x <- bootstrap(i)
-    x
+  # load data and create incidence
+  data(fluH7N9_china_2013, package = "outbreaks")
+  i <- incidence2::incidence(fluH7N9_china_2013, date_index = date_of_onset)
 
-    # find 95\% CI for peak time using bootstrap
-    peak_data <- estimate_peak(i)
-    peak_data
-    summary(peak_data$peaks)
-  })
+  # find 95\% CI for peak time using bootstrap
+  peak_data <- estimate_peak(i)
+  peak_data
+  summary(peak_data$peaks)
 }
 
 }
 \seealso{
-\code{\link[=bootstrap]{bootstrap()}} for the bootstrapping underlying this
-approach and \code{\link[=find_peak]{find_peak()}} to find the peak in a single
-\link[incidence2:incidence]{incidence2::incidence} object.
+\code{\link[=bootstrap]{bootstrap()}} for the bootstrapping underlying this approach and
+\code{\link[=find_peak]{find_peak()}} to find the peak in a single \link[incidence2:incidence]{incidence2::incidence}
+object.
 }
 \author{
-Thibaut Jombart \email{thibautjombart@gmail.com}, with inputs on
-caveats from Michael Höhle.
+Thibaut Jombart and Tim Taylor, with inputs on caveats from Michael Höhle.
 }

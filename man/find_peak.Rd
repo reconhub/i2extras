@@ -4,39 +4,34 @@
 \alias{find_peak}
 \title{Find the peak date of an incidence curve}
 \usage{
-find_peak(x, regroup = TRUE)
+find_peak(x)
 }
 \arguments{
 \item{x}{An \link[incidence2:incidence]{incidence2::incidence} object.}
-
-\item{regroup}{If \code{TRUE} (default), any groups will be regrouped before
-finding a peak. If \code{FALSE}, separate peaks will be found for each group.}
 }
 \value{
-The date of the (first) highest incidence in the data.
+A tibble containing the date of the (first) highest incidence in the
+data along with the count. If \code{x} is grouped object then the output will
+have the peak calculated for each grouping.
 }
 \description{
 This function can be used to find the peak of an epidemic curve stored as an
 \link[incidence2:incidence]{incidence2::incidence} object.
 }
 \examples{
-if (requireNamespace("outbreaks", quietly = TRUE) &&
-    requireNamespace("incidence2", quietly = TRUE)) {
+if (requireNamespace("outbreaks", quietly = TRUE)) {
 
-  withAutoprint( {
-    # load data and create incidence
-    data(fluH7N9_china_2013, package = "outbreaks")
-    i <- incidence2::incidence(fluH7N9_china_2013, date_index = date_of_onset)
-    i
+  # load data and create incidence
+  data(fluH7N9_china_2013, package = "outbreaks")
+  i <- incidence2::incidence(fluH7N9_china_2013, date_index = date_of_onset)
+  find_peak(i)
 
-    find_peak(i)
-  })
 }
+
 }
 \seealso{
-\code{\link[=estimate_peak]{estimate_peak()}} for bootstrap estimates of the peak time
+\code{\link[=estimate_peak]{estimate_peak()}} for bootstrap estimates of the peak time.
 }
 \author{
-Thibaut Jombart \email{thibautjombart@gmail.com}, Zhian N. Kamvar
-\email{zkamvar@gmail.com}
+Tim Taylor
 }

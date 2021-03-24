@@ -15,13 +15,12 @@ be preserved, but this can be used to remove any group-specific temporal
 dynamics. If \code{FALSE} (default), data are resampled within groups.}
 }
 \value{
-An \code{incidence} object.
+An \code{incidence2} object.
 }
 \description{
 This function can be used to bootstrap \link[incidence2:incidence]{incidence2::incidence} objects.
 Bootstrapping is done by sampling with replacement the original input dates.
-See \code{details} for
-more information on how this is implemented.
+See \code{details} for more information on how this is implemented.
 }
 \details{
 As original data are not stored in \link[incidence2:incidence]{incidence2::incidence} objects,
@@ -29,17 +28,13 @@ the bootstrapping is achieved by multinomial sampling of date bins weighted
 by their relative incidence.
 }
 \examples{
-if (requireNamespace("outbreaks", quietly = TRUE) &&
-    requireNamespace("incidence2", quietly = TRUE)) {
-  withAutoprint( {
-    data(fluH7N9_china_2013, package = "outbreaks")
-    i <- incidence2::incidence(fluH7N9_china_2013, date_index = date_of_onset)
-    i
-
-    x <- bootstrap(i)
-    x
-   })
+if (requireNamespace("outbreaks", quietly = TRUE)) {
+  data(fluH7N9_china_2013, package = "outbreaks")
+  i <- incidence2::incidence(fluH7N9_china_2013, date_index = date_of_onset)
+  bootstrap(i)
+  bootstrap(i, randomise_groups = TRUE)
 }
+
 }
 \seealso{
 \code{\link[=find_peak]{find_peak()}} to use estimate peak date using bootstrap

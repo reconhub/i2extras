@@ -1,11 +1,10 @@
 #' Estimate the peak date of an incidence curve using bootstrap
 #'
 #' This function can be used to estimate the peak of an epidemic curve stored as
-#' [incidence2::incidence] object, using bootstrap. See [bootstrap()] for more
-#' information on the resampling.
+#' [incidence2::incidence] object, using bootstrapped samples of the available
+#' data. See [`bootstrap()`] for more information on the resampling.
 #'
-#' @author Thibaut Jombart \email{thibautjombart@@gmail.com}, with inputs on
-#'   caveats from Michael Höhle.
+#' @author Thibaut Jombart and Tim Taylor, with inputs on caveats from Michael Höhle.
 #'
 #' @details Input dates are resampled with replacement to form bootstrapped
 #'   datasets; the peak is reported for each, resulting in a distribution of
@@ -31,150 +30,131 @@
 #' @param progress Should a progress bar be displayed (default = TRUE)
 #'
 #' @return A tibble with the the following columns:
-#' 
+#'
 #' - `observed_date`: the date of peak incidence of the original dataset.
 #' - `observed_count`: the peak incidence of the original dataset.
-#' - `estimated`: the mean peak time of the bootstrap datasets.
+#' - `estimated`: the median peak time of the bootstrap datasets.
 #' - `lower_ci/upper_ci`: the confidence interval based on bootstrap datasets.
 #' - `peaks`: a nested tibble containing the the peak times of the bootstrapped
 #'   datasets.
 #'
-#' @seealso [bootstrap()] for the bootstrapping underlying this
-#'   approach and [find_peak()] to find the peak in a single
-#'   [incidence2::incidence] object.
+#' @seealso [`bootstrap()`] for the bootstrapping underlying this approach and
+#'   [`find_peak()`] to find the peak in a single [incidence2::incidence]
+#'   object.
 #'
 #' @examples
-#' if (requireNamespace("outbreaks", quietly = TRUE) &&
-#'     requireNamespace("incidence2", quietly = TRUE)) {
-#'   withAutoprint( {
-#'     # load data and create incidence
-#'     data(fluH7N9_china_2013, package = "outbreaks")
-#'     i <- incidence2::incidence(fluH7N9_china_2013, date_index = date_of_onset)
-#'     i
+#' if (requireNamespace("outbreaks", quietly = TRUE)) {
 #'
-#'     # one simple bootstrap
-#'     x <- bootstrap(i)
-#'     x
+#'   # load data and create incidence
+#'   data(fluH7N9_china_2013, package = "outbreaks")
+#'   i <- incidence2::incidence(fluH7N9_china_2013, date_index = date_of_onset)
 #'
-#'     # find 95% CI for peak time using bootstrap
-#'     peak_data <- estimate_peak(i)
-#'     peak_data
-#'     summary(peak_data$peaks)
-#'   })
+#'   # find 95% CI for peak time using bootstrap
+#'   peak_data <- estimate_peak(i)
+#'   peak_data
+#'   summary(peak_data$peaks)
 #' }
 #'
+#' @import data.table
 #' @export
 estimate_peak <- function(x, n = 100, alpha = 0.05, progress = TRUE) {
+
   if (!inherits(x, "incidence2")) {
-    stop("x is not an incidence2 object")
+    stop(sprintf("`%s` is not an incidence object", deparse(substitute(x))))
   }
 
-  group_vars <- incidence2::get_group_names(x)
-  
-  if (!is.null(group_vars)) {
-    f_groups <- lapply(suppressMessages(x[group_vars]), factor, exclude = NULL)
-    split_x <- split(x, f_groups, sep = "-")
-  } else {
-    split_x = list(x)
-  }
-
-
-  out <- suppressMessages(
-    lapply(
-      1:length(split_x),
-      function(i) {
-        dat <- split_x[[i]]
-        bootstrap_peak(incidence2::regroup(dat),
-                       n = n,
-                       alpha = alpha,
-                       iteration = i,
-                       num_iterations = length(split_x),
-                       progress = progress)
-      }
-    )
-  )
-   
-  out <- dplyr::bind_rows(out)
-  if (!is.null(names(split_x))) {
-    groupings <- as.data.frame(do.call(rbind, strsplit(names(split_x),"-")))
-    names(groupings) <- names(f_groups)
-    out <- dplyr::bind_cols(tibble::as_tibble(groupings), out)
-  }
-  out
-
-}
-# -------------------------------------------------------------------------
-
-
-bootstrap_peak <- function(x, n = 100, alpha = 0.05, iteration = 1,
-                           num_iterations = 1, progress = FALSE) {
-
+  # get relevant column names
   date_var <- incidence2::get_dates_name(x)
-  count_var <- incidence2::get_counts_name(x)
+  count_vars <- incidence2::get_counts_name(x)
+  group_vars <- incidence2::get_group_names(x)
 
-  ## use it to find CI for epidemic peak
-  observed <- find_peak(x)
+  # Calculate the observed peak and convert to data.table for later
+  observed_peak <- find_peak(x)
+  setDT(observed_peak)
 
-  ## peaks on 'n' bootstrap samples
+  # Calculate peaks from bootstrapped data samples with optional progress bar
   if (progress) {
-    if (num_iterations > 1) {
-      msg <- sprintf("Group %s of %s; Estimating peaks from bootstrap samples:\n",
-                     iteration,
-                     num_iterations)
-    } else {
-      msg <- "Estimating peaks from bootstrap samples:\n"
+    out <- vector("list", n)
+    message("Estimating peaks from bootstrap samples:")
+    pb <- utils::txtProgressBar(min = 0, max = n, style = 3)
+    for (i in seq_len(n)) {
+      out[[i]] <- find_peak(bootstrap(x))
+      utils::setTxtProgressBar(pb, i)
     }
-
-    message(msg)
-    pb <- utils::txtProgressBar(min = 0, max = n, style = 1)
-    peak_boot <- lapply(seq_len(n),
-                        function(i) {
-                          res <- find_peak(bootstrap(x))
-                          utils::setTxtProgressBar(pb, i)
-                          res
-                        }
-    )
-    cat("\n\n")
+    close(pb)
+    cat("\n")
   } else {
-    peak_boot <- lapply(1:n, function(i) find_peak(bootstrap(x)))
+    out <- lapply(seq_len(n), function(y) find_peak(bootstrap(x), regroup = FALSE))
+  }
+  out <- rbindlist(out)
+
+  # To deal with multiple counts we introduce a dummy variable
+  dummy <- NULL
+  if (length(count_vars) > 1) {
+    dummy <- "count_variable" # hard-coded from find_peak!
+  }
+  grouping_variables <- c(group_vars, dummy)
+
+  # TODO - check this with Thibaut
+  # specify probabilities (lower_ci, median, upper_ci)
+  probs <- c(alpha/2, 0.5, 1 - alpha/2)
+
+  # first deal with the case when there is only one count and no groupings
+  if (is.null(grouping_variables)) {
+    quantiles <- out[, Reduce(c, lapply(.SD, quantiles_list, probs = probs)), .SDcols = date_var]
+    quantiles[, bootstrap_peaks := list(tibble::as_tibble(out))]
+    quantiles[, observed_peak := ..observed_peak[[date_var]]]
+    quantiles[, observed_count := ..observed_peak[[count_vars]]]
+    setcolorder(quantiles, c(group_vars, "observed_peak", "observed_count", "bootstrap_peaks"))
+    return(tibble::as_tibble(quantiles))
   }
 
+  # If we haven't returned above we have groups and or multiple counts to deal with
 
-  ## convert to vector without losing Date class
-  peak_boot <- dplyr::bind_rows(peak_boot)
+  # group peaks by group_vars and (potentially) "count_variable"
+  peaks <- out[, .(bootstrap_peaks = list(.SD)), by = grouping_variables]
 
-  # store relevant stats
-  estimated <- mean(peak_boot[[date_var]])
-  QUANTILE <-
-    if (inherits(peak_boot[[date_var]], c("Date", "POSIX"))) {
-      quantile_Date
-    } else {
-      stats::quantile
-    }
-  ci <- QUANTILE(peak_boot[[date_var]], c(alpha / 2, 1 - alpha / 2))
-  
-  tibble::tibble(
-      {{date_var}} := observed[[date_var]],
-      observed_count = observed[[count_var]],
-      estimated_date = estimated,
-      lower_ci = ci[1],
-      upper_ci = ci[2],
-      peaks = list(peak_boot)
-  )
-}
+  # group quantiles by group_vars and (potentially) "count_variable"
+  quantiles <- out[, Reduce(c, lapply(.SD, quantiles_list, probs = probs))
+                   , .SDcols = date_var
+                   , keyby = grouping_variables]
 
+  # join peaks on to quantiles (by reference)
+  quantiles[peaks, on = grouping_variables, bootstrap_peaks := i.bootstrap_peaks]
 
-
-# -------------------------------------------------------------------------
-# quantiles for Date objects
-quantile_Date <- function(x, ...) {
-  if (!inherits(x, "Date")) {
-    stop("'x' is not a 'Date' object")
+  # case with multiple count variables
+  if (length(count_vars) > 1) {
+    quantiles[observed_peak
+              , on = c(group_vars, dummy)
+              , `:=`(observed_peak = observed_peak[[date_var]],
+                     observed_count = observed_peak[["count"]])] # hard-coded from find_peak!
+    setcolorder(
+      quantiles,
+      c(group_vars, "count_variable", "observed_peak", "observed_count", "bootstrap_peaks")
+    )
+  } else {
+    #case with one count variable
+    quantiles[observed_peak
+              , on = c(group_vars)
+              , `:=`(observed_peak = observed_peak[[date_var]],
+                     observed_count = observed_peak[[count_vars]])]
+    setcolorder(quantiles, c(group_vars, "observed_peak", "observed_count", "bootstrap_peaks"))
   }
 
-  first_date <- min(x, na.rm = TRUE)
-  x_num <- as.numeric(x - min(x))
-  out <- stats::quantile(x_num, ...)
-  first_date + out
+  # convert nested data.tables to tibbles
+  quantiles[, bootstrap_peaks := lapply(bootstrap_peaks, tibble::as_tibble)]
+
+  return(tibble::as_tibble(quantiles))
 }
-# -------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------- #
+# ------------------------------- INTERNALS ------------------------------- #
+# ------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------- #
+
+quantiles_list <- function(x, probs) {
+  res <- quantile(x, probs = probs, names = FALSE, type = 1)
+  res <- setNames(res, c("lower_ci", "median", "upper_ci"))
+  as.list(res)
+}
